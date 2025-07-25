@@ -25,6 +25,8 @@ MFRC522Controller::MFRC522Controller(const int rstPin, const int ssPin, const Co
 
 void MFRC522Controller::Begin() { SPIClass::begin(); }
 
+void MFRC522Controller::PCD_DumpVersionToSerial() { mfrc522.PCD_DumpVersionToSerial(); }
+
 std::vector<byte> MFRC522Controller::ReadUID() const
 {
 	std::vector<byte> uid;
@@ -40,7 +42,7 @@ String MFRC522Controller::ReadUIDString() const
 	String uid;
 	for (byte i = 0; i < mfrc522.uid.size; i++)
 	{
-		uid += ByteToHexString(mfrc522.uid.uidByte[i]);
+		uid += " " + ByteToHexString(mfrc522.uid.uidByte[i]);
 	}
 	return uid;
 }

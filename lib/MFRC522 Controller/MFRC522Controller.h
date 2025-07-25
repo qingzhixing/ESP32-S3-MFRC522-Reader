@@ -24,6 +24,8 @@ public:
 
 	static void Begin();
 
+	void PCD_DumpVersionToSerial();
+
 	std::vector<byte> ReadUID() const;
 
 	String ReadUIDString() const;

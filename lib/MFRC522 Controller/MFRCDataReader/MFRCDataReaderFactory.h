@@ -21,6 +21,7 @@ public:
 		default:
 			return new EmptyDataReader(mfrc522, key);
 		}
+		return new EmptyDataReader(mfrc522, key);
 	};
 };
 
