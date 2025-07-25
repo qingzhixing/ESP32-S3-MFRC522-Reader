@@ -9,31 +9,42 @@
 #include <ArxContainer.h>
 #include <MFRC522.h>
 
+#include "MFRCDataReader/MFRCDataReader.h"
+
 class MFRC522Controller;
 
-typedef void (*Handler)(MFRC522Controller& controller);
+typedef void (*ControllerHandler)(const MFRC522Controller& controller);
 
 class MFRC522Controller final
 {
 public:
-	MFRC522Controller(const int rstPin, const int ssPin, const Handler onNewCardDetected);
+	MFRC522Controller(const int rstPin, const int ssPin, const ControllerHandler onNewCardDetected = nullptr);
+
 	~MFRC522Controller() = default;
+
 	static void Begin();
+
 	std::vector<byte> ReadUID() const;
+
+	String ReadUIDString() const;
+
 	MFRC522::PICC_Type ReadPICCType() const;
+
 	String ReadPICCTypeString() const;
 
-	static String DumpByteArrayToString(const byte* buffer, const byte bufferSize);
+	static String ByteToHexString(const byte value);
 
-	std::vector<byte> ReadData(MFRC522::MIFARE_Key& key) const;
+	static String DumpByteArrayToHexString(const byte* buffer, const byte bufferSize);
 
-	void SetOnNewCardDetected(Handler onNewCardDetected);
+	MFRCDataReader* GenerateDataReader(const MFRC522::MIFARE_Key& key) const;
+
+	void SetOnNewCardDetected(ControllerHandler onNewCardDetected);
 
 	void DetectCard();
 
 private:
 	MFRC522 mfrc522;
-	Handler onNewCardDetected;
+	ControllerHandler onNewCardDetected;
 };
 
 

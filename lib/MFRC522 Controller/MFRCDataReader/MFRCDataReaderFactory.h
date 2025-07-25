@@ -12,14 +12,14 @@
 class MFRCDataReaderFactory
 {
 public:
-	static MFRCDataReader* GenerateReader(const MFRC522& mfrc522)
+	static MFRCDataReader* GenerateReader(const MFRC522& mfrc522, const MFRC522::MIFARE_Key& key)
 	{
 		switch (mfrc522.PICC_GetType(mfrc522.uid.sak))
 		{
 		case MFRC522::PICC_TYPE_MIFARE_1K:
-			return new MIFARE_1K_DataReader(mfrc522);
+			return new MIFARE_1K_DataReader(mfrc522, key);
 		default:
-			return new EmptyDataReader(mfrc522);
+			return new EmptyDataReader(mfrc522, key);
 		}
 	};
 };

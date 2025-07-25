@@ -12,12 +12,26 @@
 class MFRCDataReader
 {
 public:
-	virtual std::vector<byte> ReadData(MFRC522::MIFARE_Key& key) = 0;
-	explicit MFRCDataReader(const MFRC522& mfrc522) : mfrc522(mfrc522) {};
+	/**
+	 * @brief 读取数据
+	 * @return 读取成功返回true，失败返回false
+	 */
+	virtual bool ReadData() = 0;
+
+	/**
+	 * @brief 获取之前读取过的数据
+	 * @return 数据
+	 * @warning 必须在ReadData()成功后调用，否则返回空数组
+	 */
+	virtual std::vector<byte> GetData() const = 0;
+
+	explicit MFRCDataReader(const MFRC522& mfrc522, const MFRC522::MIFARE_Key& key) : mfrc522(mfrc522), key(key) {}
+
 	virtual ~MFRCDataReader() = default;
 
 protected:
 	MFRC522 mfrc522;
+	MFRC522::MIFARE_Key key;
 };
 
 

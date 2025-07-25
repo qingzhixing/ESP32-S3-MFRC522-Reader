@@ -10,8 +10,9 @@
 class EmptyDataReader final : public MFRCDataReader
 {
 public:
-	explicit EmptyDataReader(const MFRC522& mfrc522) : MFRCDataReader(mfrc522) {}
-	std::vector<byte> ReadData(MFRC522::MIFARE_Key& key) override { return {}; }
+	explicit EmptyDataReader(const MFRC522& mfrc522, const MFRC522::MIFARE_Key& key) : MFRCDataReader(mfrc522, key) {}
+	bool ReadData() override { return false; }
+	std::vector<byte> GetData() const override { return std::vector<byte>(); }
 };
 
 

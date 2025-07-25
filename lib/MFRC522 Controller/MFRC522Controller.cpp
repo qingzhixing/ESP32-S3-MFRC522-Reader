@@ -10,7 +10,14 @@
 
 #include "MFRCDataReader/MFRCDataReaderFactory.h"
 
-MFRC522Controller::MFRC522Controller(const int rstPin, const int ssPin, const Handler onNewCardDetected) :
+String MFRC522Controller::ByteToHexString(const byte value)
+{
+	char buffer[5];
+	sprintf(buffer, "%02x", value);
+	return buffer;
+}
+
+MFRC522Controller::MFRC522Controller(const int rstPin, const int ssPin, const ControllerHandler onNewCardDetected) :
 	onNewCardDetected(onNewCardDetected)
 {
 	mfrc522.PCD_Init(ssPin, rstPin);
@@ -28,18 +35,21 @@ std::vector<byte> MFRC522Controller::ReadUID() const
 	return uid;
 }
 
+String MFRC522Controller::ReadUIDString() const
+{
+	String uid;
+	for (byte i = 0; i < mfrc522.uid.size; i++)
+	{
+		uid += ByteToHexString(mfrc522.uid.uidByte[i]);
+	}
+	return uid;
+}
+
 MFRC522::PICC_Type MFRC522Controller::ReadPICCType() const { return MFRC522::PICC_GetType(mfrc522.uid.sak); }
 
 String MFRC522Controller::ReadPICCTypeString() const { return MFRC522::PICC_GetTypeName(ReadPICCType()); }
 
-static String ByteToHexString(const byte value)
-{
-	char buffer[5];
-	sprintf(buffer, "%02x", value);
-	return buffer;
-}
-
-String MFRC522Controller::DumpByteArrayToString(const byte* buffer, const byte bufferSize)
+String MFRC522Controller::DumpByteArrayToHexString(const byte* buffer, const byte bufferSize)
 {
 	String result;
 
@@ -50,15 +60,12 @@ String MFRC522Controller::DumpByteArrayToString(const byte* buffer, const byte b
 	return result;
 }
 
-std::vector<byte> MFRC522Controller::ReadData(MFRC522::MIFARE_Key& key) const
+MFRCDataReader* MFRC522Controller::GenerateDataReader(const MFRC522::MIFARE_Key& key) const
 {
-	auto* reader = MFRCDataReaderFactory::GenerateReader(mfrc522);
-	std::vector<byte> data(reader->ReadData(key));
-	delete reader;
-	return data;
+	return MFRCDataReaderFactory::GenerateReader(mfrc522, key);
 }
 
-void MFRC522Controller::SetOnNewCardDetected(const Handler onNewCardDetected)
+void MFRC522Controller::SetOnNewCardDetected(const ControllerHandler onNewCardDetected)
 {
 	this->onNewCardDetected = onNewCardDetected;
 }
@@ -68,5 +75,10 @@ void MFRC522Controller::DetectCard()
 	if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial())
 	{
 		onNewCardDetected(*this);
+
+		// Halt PICC
+		mfrc522.PICC_HaltA();
+		// Stop encryption on PCD
+		mfrc522.PCD_StopCrypto1();
 	}
 }
