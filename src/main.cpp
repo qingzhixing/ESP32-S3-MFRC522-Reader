@@ -33,7 +33,7 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 
 	Serial.println("Generating Data Reader...");
 
-	const MFRCDataReader* reader = _controller.GenerateDataReader(key);
+	MFRCDataReader* reader = _controller.GenerateDataReader(key);
 
 	Serial.println("Data Reader Generated.");
 
@@ -52,38 +52,37 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 		return;
 	}
 
-	auto* extendReader = (MIFARE_1K_DataReader*)(reader);
-
 	Serial.println("Reading Card Data...");
 
-	const bool readState = extendReader->ReadData();
-
-	Serial.println("Read Card Data State: " + String(readState));
-
-	if (readState == false)
-	{
-		Serial.println("Read data failed");
-		delete reader;
-		return;
-	}
-	Serial.println("Read data success");
-	Serial.println("Dump data:");
-	const auto cardData = extendReader->GetOrganizedData();
-
-	for (int sectorIndex = 0;
+	for (auto sectorIndex = 0;
 		 sectorIndex < MIFARE_1K_DataReader::SECTORS_PER_CARD; sectorIndex++)
 	{
-		for (int blockIndex = 0;
+		for (auto blockIndex = 0;
 			 blockIndex < MIFARE_1K_DataReader::BLOCKS_PER_SECTOR; blockIndex++)
 		{
-			const auto blockData = cardData[sectorIndex][blockIndex];
-			String blockDataString =
-				MFRC522Controller::DumpByteArrayToHexString(
-					blockData, MIFARE_1K_DataReader::BYTES_PER_BLOCK);
-			Serial.println("Sector " + String(sectorIndex) + " Block " +
-						   String(blockIndex) + ": " + blockDataString);
+			const auto blockNumber =
+				sectorIndex * MIFARE_1K_DataReader::BLOCKS_PER_SECTOR +
+				blockIndex;
+
+			const auto result = reader->ReadBlock(blockNumber);
+
+			// print
+			Serial.print("Sector " + String(sectorIndex) + " , Block " +
+						 String(blockIndex) + ": ");
+			if (!result.first)
+			{
+				Serial.println("Failed to read block");
+				return;
+			}
+			else
+			{
+				Serial.println(
+					MFRC522Controller::DumpByteArrayToHexString(result.second));
+			}
 		}
 	}
+
+	delete reader;
 }
 
 void setup()

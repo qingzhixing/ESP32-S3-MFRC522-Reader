@@ -18,9 +18,16 @@ typedef void (*ControllerHandler)(const MFRC522Controller& controller);
 class MFRC522Controller final
 {
 public:
-	MFRC522Controller(const int rstPin, const int ssPin, const ControllerHandler onNewCardDetected = nullptr);
+	MFRC522Controller(int rstPin, int ssPin,
+					  ControllerHandler onNewCardDetected = nullptr);
 
 	~MFRC522Controller() = default;
+
+	static String ByteToHexString(byte value);
+
+	static String DumpByteArrayToHexString(const byte* buffer, byte bufferSize);
+
+	static String DumpByteArrayToHexString(const std::vector<byte>& bytes);
 
 	static void Begin();
 
@@ -33,10 +40,6 @@ public:
 	MFRC522::PICC_Type ReadPICCType() const;
 
 	String ReadPICCTypeString() const;
-
-	static String ByteToHexString(byte value);
-
-	static String DumpByteArrayToHexString(const byte* buffer, byte bufferSize);
 
 	MFRCDataReader* GenerateDataReader(const MFRC522::MIFARE_Key& key) const;
 

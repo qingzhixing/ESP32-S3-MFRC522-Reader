@@ -14,18 +14,15 @@ class MFRCDataReader
 public:
 	/**
 	 * @brief 读取数据
-	 * @return 读取成功返回true，失败返回false
+	 * @return 返回两个值:是否成功和读取到的数据
 	 */
-	virtual bool ReadData() = 0;
+	virtual std::pair<bool, std::vector<byte>> ReadBlock(int blockNumber) = 0;
 
-	/**
-	 * @brief 获取之前读取过的数据
-	 * @return 数据
-	 * @warning 必须在ReadData()成功后调用，否则返回空数组
-	 */
-	virtual std::vector<byte> GetData() const = 0;
-
-	explicit MFRCDataReader(const MFRC522& mfrc522, const MFRC522::MIFARE_Key& key) : mfrc522(mfrc522), key(key) {}
+	explicit MFRCDataReader(const MFRC522& mfrc522,
+							const MFRC522::MIFARE_Key& key) :
+		mfrc522(mfrc522), key(key)
+	{
+	}
 
 	virtual ~MFRCDataReader() = default;
 

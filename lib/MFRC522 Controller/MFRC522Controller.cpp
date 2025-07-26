@@ -17,7 +17,9 @@ String MFRC522Controller::ByteToHexString(const byte value)
 	return buffer;
 }
 
-MFRC522Controller::MFRC522Controller(const int rstPin, const int ssPin, const ControllerHandler onNewCardDetected) :
+MFRC522Controller::MFRC522Controller(
+	const int rstPin, const int ssPin,
+	const ControllerHandler onNewCardDetected) :
 	onNewCardDetected(onNewCardDetected)
 {
 	mfrc522.PCD_Init(ssPin, rstPin);
@@ -25,7 +27,10 @@ MFRC522Controller::MFRC522Controller(const int rstPin, const int ssPin, const Co
 
 void MFRC522Controller::Begin() { SPIClass::begin(); }
 
-void MFRC522Controller::PCD_DumpVersionToSerial() { mfrc522.PCD_DumpVersionToSerial(); }
+void MFRC522Controller::PCD_DumpVersionToSerial()
+{
+	mfrc522.PCD_DumpVersionToSerial();
+}
 
 std::vector<byte> MFRC522Controller::ReadUID() const
 {
@@ -47,11 +52,18 @@ String MFRC522Controller::ReadUIDString() const
 	return uid;
 }
 
-MFRC522::PICC_Type MFRC522Controller::ReadPICCType() const { return MFRC522::PICC_GetType(mfrc522.uid.sak); }
+MFRC522::PICC_Type MFRC522Controller::ReadPICCType() const
+{
+	return MFRC522::PICC_GetType(mfrc522.uid.sak);
+}
 
-String MFRC522Controller::ReadPICCTypeString() const { return MFRC522::PICC_GetTypeName(ReadPICCType()); }
+String MFRC522Controller::ReadPICCTypeString() const
+{
+	return MFRC522::PICC_GetTypeName(ReadPICCType());
+}
 
-String MFRC522Controller::DumpByteArrayToHexString(const byte* buffer, const byte bufferSize)
+String MFRC522Controller::DumpByteArrayToHexString(const byte* buffer,
+												   const byte bufferSize)
 {
 	String result;
 
@@ -61,13 +73,26 @@ String MFRC522Controller::DumpByteArrayToHexString(const byte* buffer, const byt
 	}
 	return result;
 }
+String
+MFRC522Controller::DumpByteArrayToHexString(const std::vector<byte>& bytes)
+{
+	String result;
 
-MFRCDataReader* MFRC522Controller::GenerateDataReader(const MFRC522::MIFARE_Key& key) const
+	for (const auto& byte : bytes)
+	{
+		result += " " + ByteToHexString(byte);
+	}
+	return result;
+}
+
+MFRCDataReader*
+MFRC522Controller::GenerateDataReader(const MFRC522::MIFARE_Key& key) const
 {
 	return MFRCDataReaderFactory::GenerateReader(mfrc522, key);
 }
 
-void MFRC522Controller::SetOnNewCardDetected(const ControllerHandler onNewCardDetected)
+void MFRC522Controller::SetOnNewCardDetected(
+	const ControllerHandler onNewCardDetected)
 {
 	this->onNewCardDetected = onNewCardDetected;
 }
