@@ -34,9 +34,9 @@ public:
 
 	String ReadPICCTypeString() const;
 
-	static String ByteToHexString(const byte value);
+	static String ByteToHexString(byte value);
 
-	static String DumpByteArrayToHexString(const byte* buffer, const byte bufferSize);
+	static String DumpByteArrayToHexString(const byte* buffer, byte bufferSize);
 
 	MFRCDataReader* GenerateDataReader(const MFRC522::MIFARE_Key& key) const;
 

@@ -18,14 +18,20 @@ public:
 	static constexpr int TOTAL_BLOCKS = BLOCKS_PER_SECTOR * SECTORS_PER_CARD;
 
 private:
-	byte cardData[SECTORS_PER_CARD][BLOCKS_PER_SECTOR][BYTES_PER_BLOCK]; // 存储所有块的数据
-	bool readStatus[TOTAL_BLOCKS]; // 记录每个块的读取状态
+	byte cardData[SECTORS_PER_CARD][BLOCKS_PER_SECTOR]
+				 [BYTES_PER_BLOCK]{}; // 存储所有块的数据
+	bool readStatus[TOTAL_BLOCKS]{};  // 记录每个块的读取状态
 
 public:
-	const byte (*GetOrganizedData() const)[BLOCKS_PER_SECTOR][BYTES_PER_BLOCK] { return cardData; }
+	const byte (*GetOrganizedData() const)[BLOCKS_PER_SECTOR][BYTES_PER_BLOCK]
+	{
+		return cardData;
+	}
 
 public:
-	explicit MIFARE_1K_DataReader(const MFRC522& mfrc522, const MFRC522::MIFARE_Key& key) : MFRCDataReader(mfrc522, key)
+	explicit MIFARE_1K_DataReader(const MFRC522& mfrc522,
+								  const MFRC522::MIFARE_Key& key) :
+		MFRCDataReader(mfrc522, key)
 	{
 		memset(cardData, 0, sizeof(cardData));
 		memset(readStatus, 0, sizeof(readStatus));
@@ -38,7 +44,8 @@ public:
 		memset(readStatus, 0, sizeof(readStatus));
 
 		// 遍历所有扇区（0 - 15）
-		for (byte sectorIndex = 0; sectorIndex < SECTORS_PER_CARD; sectorIndex++)
+		for (byte sectorIndex = 0; sectorIndex < SECTORS_PER_CARD;
+			 sectorIndex++)
 		{
 			// 计算扇区的第一个块（每个扇区4个块）
 			const byte firstBlockNumber = sectorIndex * BLOCKS_PER_SECTOR;
@@ -46,7 +53,8 @@ public:
 
 			// 认证当前扇区
 			MFRC522::StatusCode status =
-				mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
+				mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A,
+										 trailerBlock, &key, &(mfrc522.uid));
 
 			if (status != MFRC522::STATUS_OK)
 			{
@@ -54,7 +62,8 @@ public:
 			}
 
 			// 读取当前扇区的4个块（包括控制块）
-			for (byte blockIndex = 0; blockIndex < BLOCKS_PER_SECTOR; blockIndex++)
+			for (byte blockIndex = 0; blockIndex < BLOCKS_PER_SECTOR;
+				 blockIndex++)
 			{
 				// 真实的块号
 				const byte blockNumber = firstBlockNumber + blockIndex;
@@ -69,7 +78,8 @@ public:
 				if (status == MFRC522::STATUS_OK && size == 18)
 				{
 					// 复制数据到存储数组
-					memcpy(cardData[sectorIndex][blockIndex], buffer, BYTES_PER_BLOCK);
+					memcpy(cardData[sectorIndex][blockIndex], buffer,
+						   BYTES_PER_BLOCK);
 					readStatus[blockNumber] = true;
 				}
 				else
@@ -96,20 +106,21 @@ public:
 		{
 			if (!readState)
 			{
-				return std::vector<byte>();
+				return {};
 			}
 		}
 
 		std::vector<byte> data;
 
 		// 将数组里的数据提取出来
-		for (byte sectorIndex = 0; sectorIndex < SECTORS_PER_CARD; sectorIndex++)
+		for (const auto& sectorData : cardData)
 		{
-			for (int blockIndex = 0; blockIndex < BLOCKS_PER_SECTOR; blockIndex++)
+			for (const auto blockData : sectorData)
 			{
-				for (int byteIndex = 0; byteIndex < BYTES_PER_BLOCK; byteIndex++)
+				for (int byteIndex = 0; byteIndex < BYTES_PER_BLOCK;
+					 byteIndex++)
 				{
-					data.push_back(cardData[sectorIndex][blockIndex][byteIndex]);
+					data.push_back(blockData[byteIndex]);
 				}
 			}
 		}

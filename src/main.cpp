@@ -6,13 +6,16 @@
 #include "MFRCDataReader/MIFARE_1K_DataReader.h"
 
 #define RST_PIN 9 // Configurable, see typical pin layout above
-#define SS_PIN 10 // Configurable, take an unused pin, only HIGH/LOW required, must be different to SS 2
+#define SS_PIN                                                                 \
+	10 // Configurable, take an unused pin, only HIGH/LOW required, must be
+	   // different to SS 2
 
 MFRC522Controller* controller;
 
 void OnNewCardDetected(const MFRC522Controller& _controller)
 {
-	Serial.print(("New card detected with UID: ") + _controller.ReadUIDString());
+	Serial.print(("New card detected with UID: ") +
+				 _controller.ReadUIDString());
 	Serial.println("");
 	Serial.print("PICC type: " + _controller.ReadPICCTypeString());
 	Serial.println("");
@@ -30,7 +33,7 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 
 	Serial.println("Generating Data Reader...");
 
-	const auto reader = _controller.GenerateDataReader(key);
+	const MFRCDataReader* reader = _controller.GenerateDataReader(key);
 
 	Serial.println("Data Reader Generated.");
 
@@ -38,13 +41,15 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 	if (reader == nullptr)
 	{
 		Serial.println("No data reader available");
-		goto done;
+		delete reader;
+		return;
 	}
 
 	if (_controller.ReadPICCType() != MFRC522::PICC_TYPE_MIFARE_1K)
 	{
 		Serial.println("Not a MIFARE 1K card");
-		goto done;
+		delete reader;
+		return;
 	}
 
 	auto* extendReader = (MIFARE_1K_DataReader*)(reader);
@@ -58,25 +63,27 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 	if (readState == false)
 	{
 		Serial.println("Read data failed");
-		goto done;
+		delete reader;
+		return;
 	}
 	Serial.println("Read data success");
 	Serial.println("Dump data:");
 	const auto cardData = extendReader->GetOrganizedData();
 
-	for (int sectorIndex = 0; sectorIndex < MIFARE_1K_DataReader::SECTORS_PER_CARD; sectorIndex++)
+	for (int sectorIndex = 0;
+		 sectorIndex < MIFARE_1K_DataReader::SECTORS_PER_CARD; sectorIndex++)
 	{
-		for (int blockIndex = 0; blockIndex < MIFARE_1K_DataReader::BLOCKS_PER_SECTOR; blockIndex++)
+		for (int blockIndex = 0;
+			 blockIndex < MIFARE_1K_DataReader::BLOCKS_PER_SECTOR; blockIndex++)
 		{
 			const auto blockData = cardData[sectorIndex][blockIndex];
 			String blockDataString =
-				MFRC522Controller::DumpByteArrayToHexString(blockData, MIFARE_1K_DataReader::BYTES_PER_BLOCK);
-			Serial.println("Sector " + String(sectorIndex) + " Block " + String(blockIndex) + ": " + blockDataString);
+				MFRC522Controller::DumpByteArrayToHexString(
+					blockData, MIFARE_1K_DataReader::BYTES_PER_BLOCK);
+			Serial.println("Sector " + String(sectorIndex) + " Block " +
+						   String(blockIndex) + ": " + blockDataString);
 		}
 	}
-
-done:
-	delete reader;
 }
 
 void setup()
