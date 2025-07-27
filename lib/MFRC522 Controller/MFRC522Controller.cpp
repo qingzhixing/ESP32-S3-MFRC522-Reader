@@ -25,7 +25,11 @@ MFRC522Controller::MFRC522Controller(
 	mfrc522.PCD_Init(ssPin, rstPin);
 }
 
-void MFRC522Controller::Begin() { SPIClass::begin(); }
+void MFRC522Controller::Begin(const int8_t sck, const int8_t miso,
+							  const int8_t mosi, const int8_t ss)
+{
+	SPI.begin(sck, miso, mosi, ss);
+}
 
 void MFRC522Controller::PCD_DumpVersionToSerial()
 {

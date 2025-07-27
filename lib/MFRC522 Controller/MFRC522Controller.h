@@ -29,7 +29,7 @@ public:
 
 	static String DumpByteArrayToHexString(const std::vector<byte>& bytes);
 
-	static void Begin();
+	static void Begin(int8_t sck, int8_t miso, int8_t mosi, int8_t ss);
 
 	void PCD_DumpVersionToSerial();
 

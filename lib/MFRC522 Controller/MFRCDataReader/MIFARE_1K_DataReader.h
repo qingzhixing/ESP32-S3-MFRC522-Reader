@@ -18,7 +18,6 @@ public:
 	static constexpr int TOTAL_BLOCKS = BLOCKS_PER_SECTOR * SECTORS_PER_CARD;
 
 public:
-public:
 	explicit MIFARE_1K_DataReader(const MFRC522& mfrc522,
 								  const MFRC522::MIFARE_Key& key) :
 		MFRCDataReader(mfrc522, key)

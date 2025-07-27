@@ -6,21 +6,36 @@
 #include "MFRCDataReader/MIFARE_1K_DataReader.h"
 
 #define RST_PIN 9 // Configurable, see typical pin layout above
-#define SS_PIN                                                                 \
-	10 // Configurable, take an unused pin, only HIGH/LOW required, must be
-	   // different to SS 2
+#define SS_PIN 10
+#define SCK_PIN 36
+#define MISO_PIN 37
+#define MOSI_PIN 35
 
 MFRC522Controller* controller;
 
+byte blockData[MIFARE_1K_DataReader::TOTAL_BLOCKS]
+			  [MIFARE_1K_DataReader::BYTES_PER_BLOCK];
+bool blockDataPrepared[MIFARE_1K_DataReader::TOTAL_BLOCKS];
+
+String lastCardString;
+
 void OnNewCardDetected(const MFRC522Controller& _controller)
 {
-	Serial.print(("New card detected with UID: ") +
-				 _controller.ReadUIDString());
-	Serial.println("");
-	Serial.print("PICC type: " + _controller.ReadPICCTypeString());
-	Serial.println("");
+	const String cardUIDString = _controller.ReadUIDString();
+	if (cardUIDString != lastCardString)
+	{
+		lastCardString = cardUIDString;
 
-	Serial.println("Generating Default Key: FF FF FF FF FF FF");
+		memset(blockData, 0, sizeof(blockData));
+		memset(blockDataPrepared, 0, sizeof(blockDataPrepared));
+
+		Serial.println(("New card detected with UID: ") + cardUIDString);
+		Serial.println("PICC type: " + _controller.ReadPICCTypeString());
+	}
+	else
+	{
+		Serial.println("\nRetry Reading Card UID: " + cardUIDString);
+	}
 
 	// 使用默认密钥
 	MFRC522::MIFARE_Key key;
@@ -29,13 +44,7 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 		byte = 0xFF;
 	}
 
-	Serial.println("Key Generated.");
-
-	Serial.println("Generating Data Reader...");
-
 	MFRCDataReader* reader = _controller.GenerateDataReader(key);
-
-	Serial.println("Data Reader Generated.");
 
 	// 暂时支支持解析1K卡
 	if (reader == nullptr)
@@ -64,22 +73,58 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 				sectorIndex * MIFARE_1K_DataReader::BLOCKS_PER_SECTOR +
 				blockIndex;
 
-			const auto result = reader->ReadBlock(blockNumber);
+			if (blockDataPrepared[sectorIndex])
+				continue;
 
-			// print
-			Serial.print("Sector " + String(sectorIndex) + " , Block " +
-						 String(blockIndex) + ": ");
+			auto result = reader->ReadBlock(blockNumber);
+
+			// auto retry
+			int retryCountDown = 10;
+			while (!result.first && retryCountDown > 0)
+			{
+				retryCountDown--;
+				result = reader->ReadBlock(blockNumber);
+			}
+
 			if (!result.first)
 			{
+				// print
+				Serial.print("Sector " + String(sectorIndex) + " , Block " +
+							 String(blockIndex) + ": ");
 				Serial.println("Failed to read block");
 				return;
 			}
-			else
+
+			for (auto byteIndex = 0;
+				 byteIndex < MIFARE_1K_DataReader::BYTES_PER_BLOCK; byteIndex++)
 			{
-				Serial.println(
-					MFRC522Controller::DumpByteArrayToHexString(result.second));
+				blockData[blockNumber][byteIndex] = result.second[byteIndex];
+				blockDataPrepared[sectorIndex] = true;
 			}
 		}
+	}
+
+	for (const auto& prepared : blockDataPrepared)
+	{
+		if (!prepared)
+		{
+			delete reader;
+			return;
+		}
+	}
+
+	// 打印全部
+	for (auto blockNumber = 0; blockNumber < MIFARE_1K_DataReader::TOTAL_BLOCKS;
+		 blockNumber++)
+	{
+		Serial.print("Block " + String(blockNumber) + ":");
+		for (auto byteIndex = 0;
+			 byteIndex < MIFARE_1K_DataReader::BYTES_PER_BLOCK; byteIndex++)
+		{
+			Serial.print(" " + MFRC522Controller::ByteToHexString(
+								   blockData[blockNumber][byteIndex]));
+		}
+		Serial.println("");
 	}
 
 	delete reader;
@@ -88,7 +133,7 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 void setup()
 {
 
-	Serial.begin(9600); // Initialize serial communications with the PC
+	Serial.begin(9600);
 
 	for (int i = 0; i < 20; i++)
 	{
@@ -96,7 +141,7 @@ void setup()
 	}
 	Serial.println("Serial initialized.");
 
-	MFRC522Controller::Begin();
+	MFRC522Controller::Begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
 
 	controller = new MFRC522Controller(RST_PIN, SS_PIN);
 
