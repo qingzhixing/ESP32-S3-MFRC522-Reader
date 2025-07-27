@@ -15,7 +15,6 @@ public:
 	static MFRCDataReader* GenerateReader(const MFRC522& mfrc522,
 										  const MFRC522::MIFARE_Key& key)
 	{
-		Serial.println("Factory Generating Reader...");
 		switch (MFRC522::PICC_GetType(mfrc522.uid.sak))
 		{
 		case MFRC522::PICC_TYPE_MIFARE_1K:

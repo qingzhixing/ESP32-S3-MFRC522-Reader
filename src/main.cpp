@@ -29,7 +29,7 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 		memset(blockData, 0, sizeof(blockData));
 		memset(blockDataPrepared, 0, sizeof(blockDataPrepared));
 
-		Serial.println(("New card detected with UID: ") + cardUIDString);
+		Serial.println(("\nNew card detected with UID: ") + cardUIDString);
 		Serial.println("PICC type: " + _controller.ReadPICCTypeString());
 	}
 	else
@@ -50,7 +50,6 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 	if (reader == nullptr)
 	{
 		Serial.println("No data reader available");
-		delete reader;
 		return;
 	}
 
@@ -73,8 +72,10 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 				sectorIndex * MIFARE_1K_DataReader::BLOCKS_PER_SECTOR +
 				blockIndex;
 
-			if (blockDataPrepared[sectorIndex])
+			if (blockDataPrepared[blockNumber])
 				continue;
+
+			Serial.println("Reading Block " + String(blockNumber) + "...");
 
 			auto result = reader->ReadBlock(blockNumber);
 
@@ -99,7 +100,7 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 				 byteIndex < MIFARE_1K_DataReader::BYTES_PER_BLOCK; byteIndex++)
 			{
 				blockData[blockNumber][byteIndex] = result.second[byteIndex];
-				blockDataPrepared[sectorIndex] = true;
+				blockDataPrepared[blockNumber] = true;
 			}
 		}
 	}
