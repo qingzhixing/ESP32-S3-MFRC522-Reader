@@ -3,7 +3,7 @@
 #include <MFRC522.h>
 
 #include "MFRC522Controller.h"
-#include "MFRCDataReader/MIFARE_1K_DataReader.h"
+#include "RFIDDataController/MIFARE_1K_DataController.h"
 
 #define RST_PIN 9 // Configurable, see typical pin layout above
 #define SS_PIN 10
@@ -13,9 +13,9 @@
 
 MFRC522Controller* controller;
 
-byte blockData[MIFARE_1K_DataReader::TOTAL_BLOCKS]
-			  [MIFARE_1K_DataReader::BYTES_PER_BLOCK];
-bool blockDataPrepared[MIFARE_1K_DataReader::TOTAL_BLOCKS];
+byte blockData[MIFARE_1K_DataController::TOTAL_BLOCKS]
+			  [MIFARE_1K_DataController::BYTES_PER_BLOCK];
+bool blockDataPrepared[MIFARE_1K_DataController::TOTAL_BLOCKS];
 
 String lastCardString;
 
@@ -34,7 +34,7 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 	}
 	else
 	{
-		Serial.println("\nRetry Reading Card UID: " + cardUIDString);
+		Serial.println("\nRetry R/W Card UID: " + cardUIDString);
 	}
 
 	// 使用默认密钥
@@ -44,10 +44,11 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 		byte = 0xFF;
 	}
 
-	MFRCDataReader* reader = _controller.GenerateDataReader(key);
+	RFIDDataController* dataController =
+		_controller.GenerateDataController(key);
 
 	// 暂时支支持解析1K卡
-	if (reader == nullptr)
+	if (dataController == nullptr)
 	{
 		Serial.println("No data reader available");
 		return;
@@ -56,79 +57,131 @@ void OnNewCardDetected(const MFRC522Controller& _controller)
 	if (_controller.ReadPICCType() != MFRC522::PICC_TYPE_MIFARE_1K)
 	{
 		Serial.println("Not a MIFARE 1K card");
-		delete reader;
+		delete dataController;
 		return;
 	}
 
-	Serial.println("Reading Card Data...");
+	// 根据输入来进行读取或者写入数据
+	bool rwMode = false; // true: 写入模式, false: 读取模式
+	Serial.println("Enter R/W Mode (1: Write, 0: Read): ");
 
-	for (auto sectorIndex = 0;
-		 sectorIndex < MIFARE_1K_DataReader::SECTORS_PER_CARD; sectorIndex++)
+	while (true)
 	{
-		for (auto blockIndex = 0;
-			 blockIndex < MIFARE_1K_DataReader::BLOCKS_PER_SECTOR; blockIndex++)
+		if (Serial.available())
 		{
-			const auto blockNumber =
-				sectorIndex * MIFARE_1K_DataReader::BLOCKS_PER_SECTOR +
-				blockIndex;
+			String input = Serial.readStringUntil('\n');
+			input.trim();
+			Serial.println("Input: " + input);
+			rwMode = input == "1";
+			break;
+		}
+	}
 
-			if (blockDataPrepared[blockNumber])
-				continue;
+	Serial.println(rwMode ? "Write Mode" : "Read Mode");
 
-			Serial.println("Reading Block " + String(blockNumber) + "...");
+	if (false == rwMode)
+	{
+		Serial.println("Reading Card Data...");
 
-			auto result = reader->ReadBlock(blockNumber);
-
-			// auto retry
-			int retryCountDown = 10;
-			while (!result.first && retryCountDown > 0)
+		for (auto sectorIndex = 0;
+			 sectorIndex < MIFARE_1K_DataController::SECTORS_PER_CARD;
+			 sectorIndex++)
+		{
+			for (auto blockIndex = 0;
+				 blockIndex < MIFARE_1K_DataController::BLOCKS_PER_SECTOR;
+				 blockIndex++)
 			{
-				retryCountDown--;
-				result = reader->ReadBlock(blockNumber);
+				const auto blockNumber =
+					sectorIndex * MIFARE_1K_DataController::BLOCKS_PER_SECTOR +
+					blockIndex;
+
+				if (blockDataPrepared[blockNumber])
+					continue;
+
+				Serial.println("Reading Block " + String(blockNumber) + "...");
+
+				auto result = dataController->ReadBlock(blockNumber);
+
+				// auto retry
+				int retryCountDown = 10;
+				while (!result.first && retryCountDown > 0)
+				{
+					retryCountDown--;
+					result = dataController->ReadBlock(blockNumber);
+				}
+
+				if (!result.first)
+				{
+					// print
+					Serial.print("Sector " + String(sectorIndex) + " , Block " +
+								 String(blockIndex) + ": ");
+					Serial.println("Failed to read block");
+					return;
+				}
+
+				for (auto byteIndex = 0;
+					 byteIndex < MIFARE_1K_DataController::BYTES_PER_BLOCK;
+					 byteIndex++)
+				{
+					blockData[blockNumber][byteIndex] =
+						result.second[byteIndex];
+					blockDataPrepared[blockNumber] = true;
+				}
 			}
+		}
 
-			if (!result.first)
+		for (const auto& prepared : blockDataPrepared)
+		{
+			if (!prepared)
 			{
-				// print
-				Serial.print("Sector " + String(sectorIndex) + " , Block " +
-							 String(blockIndex) + ": ");
-				Serial.println("Failed to read block");
+				delete dataController;
 				return;
 			}
+		}
 
+		// 打印全部
+		for (auto blockNumber = 0;
+			 blockNumber < MIFARE_1K_DataController::TOTAL_BLOCKS;
+			 blockNumber++)
+		{
+			Serial.print("Block " + String(blockNumber) + ":");
 			for (auto byteIndex = 0;
-				 byteIndex < MIFARE_1K_DataReader::BYTES_PER_BLOCK; byteIndex++)
+				 byteIndex < MIFARE_1K_DataController::BYTES_PER_BLOCK;
+				 byteIndex++)
 			{
-				blockData[blockNumber][byteIndex] = result.second[byteIndex];
-				blockDataPrepared[blockNumber] = true;
+				Serial.print(" " + MFRC522Controller::ByteToHexString(
+									   blockData[blockNumber][byteIndex]));
+			}
+			Serial.println("");
+		}
+
+		delete dataController;
+	}
+	else
+	{
+		Serial.println("Writing Card Data...");
+
+		// 获取用户要写入的UID
+		Serial.println("Please input UID to write:(Like: FF FF FF FF)");
+
+		while (true)
+		{
+			if (Serial.available())
+			{
+				String inputStr = Serial.readStringUntil('\n');
+				inputStr.trim();
+				Serial.println("Input UID: " + inputStr);
+				break;
 			}
 		}
-	}
 
-	for (const auto& prepared : blockDataPrepared)
-	{
-		if (!prepared)
-		{
-			delete reader;
-			return;
-		}
-	}
+		// 解析字符串
+		byte uid[6];
 
-	// 打印全部
-	for (auto blockNumber = 0; blockNumber < MIFARE_1K_DataReader::TOTAL_BLOCKS;
-		 blockNumber++)
-	{
-		Serial.print("Block " + String(blockNumber) + ":");
-		for (auto byteIndex = 0;
-			 byteIndex < MIFARE_1K_DataReader::BYTES_PER_BLOCK; byteIndex++)
-		{
-			Serial.print(" " + MFRC522Controller::ByteToHexString(
-								   blockData[blockNumber][byteIndex]));
-		}
-		Serial.println("");
-	}
+		// TODO: Coding Here,解析用户输入的UID
 
-	delete reader;
+		delete dataController;
+	}
 }
 
 void setup()

@@ -8,7 +8,7 @@
 #include <MFRC522.h>
 #include <SPI.h>
 
-#include "MFRCDataReader/MFRCDataReaderFactory.h"
+#include "RFIDDataController/RFIDDataControllerFactory.h"
 
 String MFRC522Controller::ByteToHexString(const byte value)
 {
@@ -89,10 +89,10 @@ MFRC522Controller::DumpByteArrayToHexString(const std::vector<byte>& bytes)
 	return result;
 }
 
-MFRCDataReader*
-MFRC522Controller::GenerateDataReader(const MFRC522::MIFARE_Key& key) const
+RFIDDataController*
+MFRC522Controller::GenerateDataController(const MFRC522::MIFARE_Key& key) const
 {
-	return MFRCDataReaderFactory::GenerateReader(mfrc522, key);
+	return RFIDDataControllerFactory::GenerateDataController(mfrc522, key);
 }
 
 void MFRC522Controller::SetOnNewCardDetected(

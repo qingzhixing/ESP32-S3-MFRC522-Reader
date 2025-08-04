@@ -9,7 +9,7 @@
 #include <ArxContainer.h>
 #include <MFRC522.h>
 
-#include "MFRCDataReader/MFRCDataReader.h"
+#include "RFIDDataController/RFIDDataController.h"
 
 class MFRC522Controller;
 
@@ -41,7 +41,8 @@ public:
 
 	String ReadPICCTypeString() const;
 
-	MFRCDataReader* GenerateDataReader(const MFRC522::MIFARE_Key& key) const;
+	RFIDDataController*
+	GenerateDataController(const MFRC522::MIFARE_Key& key) const;
 
 	void SetOnNewCardDetected(ControllerHandler onNewCardDetected);
 
